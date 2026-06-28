@@ -1,6 +1,5 @@
 """Test unit per TimestampMixin — nessuna connessione DB richiesta."""
 
-from datetime import datetime
 
 import pytest
 from sqlalchemy import inspect as sa_inspect
