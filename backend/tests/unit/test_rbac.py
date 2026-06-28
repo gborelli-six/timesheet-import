@@ -6,7 +6,6 @@ import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
-import app.core.rbac as rbac_module
 import app.core.security as security_module
 from app.core.rbac import CurrentUser, require_role
 

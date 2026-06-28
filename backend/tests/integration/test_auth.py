@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -18,9 +18,15 @@ def _make_session_cookie(
     role: str = "employee",
     secret: str = TEST_SECRET,
 ) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     return pyjwt.encode(
-        {"sub": "user-123", "email": email, "role": role, "iat": now, "exp": now + timedelta(hours=8)},
+        {
+            "sub": "user-123",
+            "email": email,
+            "role": role,
+            "iat": now,
+            "exp": now + timedelta(hours=8),
+        },
         secret,
         algorithm="HS256",
     )
@@ -53,7 +59,11 @@ def test_callback_success(auth_client):
         patch("app.routers.auth.http_requests.post", return_value=mock_http_resp),
         patch(
             "app.routers.auth.google_id_token.verify_oauth2_token",
-            return_value={"email": "alice@sixfeetup.it", "name": "Alice", "hd": "sixfeetup.it"},
+            return_value={
+                "email": "alice@sixfeetup.it",
+                "name": "Alice",
+                "hd": "sixfeetup.it",
+            },
         ),
         patch("app.routers.auth.upsert_user", return_value=fake_user),
     ):
@@ -95,7 +105,11 @@ def test_callback_wrong_domain(auth_client):
         patch("app.routers.auth.http_requests.post", return_value=mock_http_resp),
         patch(
             "app.routers.auth.google_id_token.verify_oauth2_token",
-            return_value={"email": "alice@gmail.com", "name": "Alice", "hd": "gmail.com"},
+            return_value={
+                "email": "alice@gmail.com",
+                "name": "Alice",
+                "hd": "gmail.com",
+            },
         ),
     ):
         r = auth_client.post(
@@ -122,9 +136,17 @@ def test_me_without_cookie(auth_client):
 
 def test_logout(auth_client):
     token = _make_session_cookie()
-    r = auth_client.get("/api/auth/logout", cookies={"session": token}, follow_redirects=False)
+    r = auth_client.get(
+        "/api/auth/logout",
+        cookies={"session": token},
+        follow_redirects=False,
+    )
     assert r.status_code == 302
     assert r.headers["location"] == "/login"
     set_cookie = r.headers.get("set-cookie", "")
     assert "session" in set_cookie
-    assert "max-age=0" in set_cookie.lower() or 'max-age="0"' in set_cookie.lower() or "expires=" in set_cookie.lower()
+    assert (
+        "max-age=0" in set_cookie.lower()
+        or 'max-age="0"' in set_cookie.lower()
+        or "expires=" in set_cookie.lower()
+    )

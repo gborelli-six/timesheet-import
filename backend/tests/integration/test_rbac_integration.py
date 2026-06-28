@@ -4,7 +4,6 @@ import jwt
 import pytest
 from fastapi.testclient import TestClient
 
-import app.core.rbac as rbac_module
 import app.core.security as security_module
 from app.main import app
 

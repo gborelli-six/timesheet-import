@@ -11,7 +11,11 @@ TEST_SECRET = "test-security-secret-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"  # 32+ byt
 
 @pytest.fixture(autouse=True)
 def patch_settings(monkeypatch):
-    monkeypatch.setattr(security_module, "settings", SimpleNamespace(jwt_secret=TEST_SECRET))
+    monkeypatch.setattr(
+        security_module,
+        "settings",
+        SimpleNamespace(jwt_secret=TEST_SECRET),
+    )
 
 
 def test_jwt_round_trip():
