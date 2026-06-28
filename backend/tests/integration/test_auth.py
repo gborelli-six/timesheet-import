@@ -39,6 +39,7 @@ def auth_client(monkeypatch):
         google_client_id="fake-client-id",
         google_client_secret="fake-client-secret",
         google_redirect_uri="http://localhost/cb",
+        environment="test",
     )
     monkeypatch.setattr(security_module, "settings", fake)
     monkeypatch.setattr(auth_module, "settings", fake)
