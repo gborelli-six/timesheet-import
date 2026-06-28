@@ -1,6 +1,6 @@
 # Guida allo sviluppo locale — Timesheet Hub
 
-> Aggiornato: E2 (STORY-012). Workflow Alembic completo.
+> Aggiornato: E3 (STORY-008). Google OAuth, JWT, tabella `users`.
 > Riferimenti: ADR-001 · ADR-002 · ADR-003 · ADR-004 · `docs/timesheet-hub-roadmap.md`
 
 ## Introduzione
@@ -28,13 +28,23 @@ Questa guida descrive come avviare e sviluppare Timesheet Hub in locale. Lo stac
 
 ## 2. Setup iniziale (.env)
 
-Copiare il file di esempio e compilare i valori necessari:
+Il progetto ha **tre** file `.env.example`, uno per modalità di avvio:
+
+| File | Usato da | Quando copiarlo |
+|---|---|---|
+| `.env.example` (root) | `docker-compose.yml` | **Sempre** — è il punto di partenza per `make up` |
+| `backend/.env.example` | FastAPI via pydantic-settings | Solo se si avvia il backend **fuori Docker** (es. `uv run uvicorn ...` nella cartella `backend/`) |
+| `frontend/.env.example` | Vite | Solo se si avvia il frontend **fuori Docker** (es. `npm run dev` nella cartella `frontend/`) |
+
+### Caso tipico: stack Docker completo
 
 ```bash
 cp .env.example .env
+# Editare .env: aggiungere JWT_SECRET, TOKEN_ENCRYPT_KEY, VITE_GOOGLE_CLIENT_ID
+make up
 ```
 
-Variabili nel `.env` (root), con valori di default per lo sviluppo locale:
+Variabili nel `.env` (root):
 
 | Variabile | Default dev | Note |
 |---|---|---|
@@ -43,10 +53,30 @@ Variabili nel `.env` (root), con valori di default per lo sviluppo locale:
 | `POSTGRES_DB` | `timesheet_hub` | Nome database |
 | `JWT_SECRET` | *(da impostare)* | Qualsiasi stringa in dev; in prod: Railway Secret |
 | `TOKEN_ENCRYPT_KEY` | *(da impostare)* | Chiave AES-256-GCM per token utente; in prod: Railway Secret |
-| `E2E_TEST_MODE` | `false` | Impostare `true` solo per `make e2e`; mai in prod (ADR-003-B) |
-| `VITE_GOOGLE_CLIENT_ID` | *(opzionale in E1)* | Necessario da E3 (auth Google) |
+| `ENVIRONMENT` | `local` | Determina se `E2E_TEST_MODE=true` è lecito (ADR-003-B) |
+| `E2E_TEST_MODE` | `false` | Impostare `true` solo per `make e2e`; mai in prod |
+| `VITE_GOOGLE_CLIENT_ID` | *(da impostare da E3)* | Client ID pubblico GCP (non è un secret) |
 
-> Ogni servizio ha il proprio `.env.example` (backend, frontend) che verrà aggiunto nelle epiche successive.
+### Caso alternativo: backend standalone (senza Docker)
+
+```bash
+cp backend/.env.example backend/.env
+# Editare backend/.env: DATABASE_URL, JWT_SECRET, TOKEN_ENCRYPT_KEY,
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI
+cd backend && uv run uvicorn app.main:app --reload
+```
+
+`backend/.env` contiene anche le credenziali OAuth complete (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`) che nel root `.env` non sono presenti perché il container backend le riceve via environment da Railway in produzione.
+
+### Caso alternativo: frontend standalone (senza Docker)
+
+```bash
+cp frontend/.env.example frontend/.env
+# Editare frontend/.env: VITE_GOOGLE_CLIENT_ID
+cd frontend && npm run dev
+```
+
+`frontend/.env` espone solo variabili `VITE_*` (incluse nel bundle client-side); non inserire mai secret qui. `VITE_API_BASE_URL` è commentata: in sviluppo il proxy Vite → `/api` è già configurato in `vite.config.ts`, in produzione si usano path relativi.
 
 ## 3. Avviare lo stack (docker-compose + Makefile)
 
