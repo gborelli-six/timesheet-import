@@ -1,3 +1,4 @@
+import logging
 import secrets
 from typing import Annotated
 from urllib.parse import urlencode
@@ -15,6 +16,8 @@ from app.core.security import create_jwt
 from app.db.session import get_db
 from app.models.user import upsert_user
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -25,6 +28,11 @@ REQUIRED_HD = "sixfeetup.it"
 class CallbackRequest(BaseModel):
     code: str
     state: str
+
+
+def _is_secure() -> bool:
+    # Cookie Secure obbligatorio in production; disabilitato in locale (HTTP).
+    return settings.environment == "production"
 
 
 @router.get("/login", status_code=302)
@@ -45,7 +53,7 @@ def login() -> RedirectResponse:
         key="oauth_state",
         value=state,
         httponly=True,
-        secure=True,
+        secure=_is_secure(),
         samesite="strict",
         max_age=600,
         path="/",
@@ -67,6 +75,7 @@ def callback(
             detail="Parametro state non valido o assente",
         )
 
+    logger.info("OAuth callback: state OK, redirect_uri=%s", settings.google_redirect_uri)
     token_resp = http_requests.post(
         GOOGLE_TOKEN_URL,
         data={
@@ -79,9 +88,10 @@ def callback(
         timeout=10,
     )
     if not token_resp.ok:
+        logger.error("Google token exchange failed: %s %s", token_resp.status_code, token_resp.text)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Errore scambio token con Google",
+            detail=f"Errore scambio token con Google: {token_resp.json().get('error_description', token_resp.text)}",
         )
     token_data = token_resp.json()
     id_token_str = token_data.get("id_token")
@@ -117,7 +127,7 @@ def callback(
         key="session",
         value=jwt_token,
         httponly=True,
-        secure=True,
+        secure=_is_secure(),
         samesite="strict",
         max_age=28800,
         path="/",
