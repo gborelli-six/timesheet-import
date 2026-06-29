@@ -196,6 +196,8 @@ Il ruolo è incluso nel JWT al momento del login e non richiede una query al DB 
 
 ### ADR-001-H — Secrets management: due livelli separati
 
+> Dettaglio implementativo completo in [`ADR-005`](ADR-005-connector-credentials-security.md): schema `user_tokens`, cifratura AES-256-GCM con AAD, contratto API write-only, rotazione chiavi.
+
 **Livello 1 — Secrets di sistema** (configurati dall'admin, invarianti a runtime):
 
 | Secret | Descrizione |
@@ -203,25 +205,31 @@ Il ruolo è incluso nel JWT al momento del login e non richiede una query al DB 
 | `GOOGLE_CLIENT_ID` | Client ID applicazione Google OAuth |
 | `GOOGLE_CLIENT_SECRET` | Client secret Google OAuth |
 | `JWT_SECRET` | Chiave di firma JWT, 256-bit random, rotazione ogni 90 giorni |
-| `TOKEN_ENCRYPT_KEY` | Chiave AES-256 per cifrare i token per-utente nel DB |
+| `TOKEN_ENCRYPT_KEY` | Chiave AES-256 per cifrare i segreti per-utente nel DB (dettagli in ADR-005-B/D) |
 
 Gestiti tramite **Infisical** (free tier) o variabili d'ambiente cifrate su Railway. Mai in chiaro nel repository.
 
-**Livello 2 — Token per-utente** (Jira, Odoo, Linear, Asana):
+**Livello 2 — Credenziali per-utente** (Jira, Odoo, Linear, Asana):
 
-Ogni dipendente inserisce i propri token API nel proprio profilo. Il backend li cifra con **AES-256-GCM** prima di scriverli in DB, usando un IV random per ogni record.
+Ogni dipendente inserisce nel proprio profilo le credenziali dei connettori: un identificativo in chiaro (`account_identifier`, es. email o username) e un segreto API (`secret`). Il backend cifra il segreto con **AES-256-GCM** prima di scriverlo in DB, usando un nonce random a 96-bit per ogni scrittura. L'identificativo è sempre visibile; il segreto è write-only.
 
-Schema tabella `user_tokens`:
+Schema tabella `user_tokens` (schema completo in ADR-005-A):
 
 | Campo | Tipo | Note |
 |---|---|---|
+| `id` | UUID | PK |
 | `user_id` | FK | riferimento a `users` |
 | `service` | enum | `'jira'`, `'odoo'`, `'linear'`, `'asana'` |
-| `token_enc` | bytes | token cifrato AES-256-GCM |
-| `iv` | bytes | initialization vector, unico per record |
+| `label` | String(255) | nome del connettore, unico per utente (chiave dell'API) |
+| `base_url` | String(512) | URL base per istanze self-hosted (nullable) |
+| `account_identifier` | String(255) | username/email in chiaro (nullable) |
+| `secret_enc` | bytes | segreto cifrato AES-256-GCM |
+| `nonce` | bytes(12) | nonce a 96-bit, unico per ogni scrittura |
+| `key_version` | SmallInt | versione chiave per rotazione (default 1) |
+| `created_at` | timestamp | |
 | `updated_at` | timestamp | |
 
-A runtime, il token viene decifrato in memoria solo al momento della chiamata API esterna e immediatamente scartato. Non viene mai loggato. Un errore 401 dal servizio esterno genera una notifica all'utente per aggiornare il token.
+A runtime, il segreto viene decifrato in memoria solo al momento della chiamata API esterna e immediatamente scartato. Non viene mai loggato. Un errore 401 dal servizio esterno imposta `needs_reauth = true` sul connettore e notifica il dipendente di aggiornare la credenziale.
 
 ---
 

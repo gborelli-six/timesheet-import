@@ -85,15 +85,19 @@ L'admin può configurare:
 
 ---
 
-## Gestione dei token per-utente
+## Gestione dei connettori per-utente
 
-Ciascun dipendente inserisce nel proprio profilo i token API personali per i backend che utilizza (es. il proprio API token Jira). I token sono:
+> Dettaglio decisioni implementative in [`ADR-005`](../adr/ADR-005-connector-credentials-security.md).
 
-- Cifrati prima di essere salvati nel database.
-- Mai visibili in chiaro dopo l'inserimento (solo sostituibili).
-- Usati esclusivamente a runtime durante l'importazione e immediatamente scartati dalla memoria.
+Ciascun dipendente configura nel proprio profilo le credenziali dei connettori per i backend che utilizza. Ogni connettore è identificato da una **label** (nome assegnato dall'utente, es. "Jira Azienda") e ha:
 
-Se un token risulta scaduto o non valido al momento dell'importazione, il sistema notifica il dipendente di aggiornarlo.
+- **`account_identifier`** — username, email o ID account del servizio esterno; visibile in chiaro nella UI dopo il salvataggio.
+- **`secret`** — token API o password; **write-only**: non viene mai restituito né visualizzato dopo l'inserimento, solo sostituibile.
+- **`base_url`** — URL base per istanze self-hosted (es. Odoo on-premise); opzionale.
+
+Il segreto è cifrato con AES-256-GCM prima della scrittura in DB; più connettori dello stesso servizio (es. due istanze Jira diverse) sono supportati con label distinte.
+
+Se un segreto risulta scaduto o non valido al momento dell'importazione, il connettore viene marcato "da aggiornare" e il dipendente viene notificato di sostituire la credenziale.
 
 ---
 
