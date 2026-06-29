@@ -1,6 +1,6 @@
 # Backlog Timesheet Hub
 
-> Aggiornato: 2026-06-29 — E1/E2/E3/E4 completate; E5/E6 dettagliate. **Riprioritizzazione employee-first** (roadmap v0.5): rilascio in ordine 🏁 Employee MVP → 🏁 Admin → 🏁 HR. Wizard e log spezzati in E8a/E9a (employee) ed E8b/E9b (HR); nuova epica E3bis (gestione ruoli); seed config Odoo in E7.
+> Aggiornato: 2026-06-29 — E1/E2/E3/E4/E5 completate; E6 dettagliata. **Riprioritizzazione employee-first** (roadmap v0.5): rilascio in ordine 🏁 Employee MVP → 🏁 Admin → 🏁 HR. Wizard e log spezzati in E8a/E9a (employee) ed E8b/E9b (HR); nuova epica E3bis (gestione ruoli); seed config Odoo in E7.
 
 Il backlog è effimero: le storie completate vengono rimosse dopo il merge su `main` e l'aggiornamento della documentazione permanente (ADR, spec, guide). I dati persistenti vivono in ADR/spec/test/codice, non qui.
 
@@ -16,7 +16,7 @@ Ordine di rilascio **employee-first** (vedi `docs/timesheet-hub-roadmap.md` v0.5
 | E2 | 6 | 0 | 0 | 0 | 6 ✅ | |
 | E3 | 7 | 0 | 0 | 0 | 7 ✅ | |
 | E4 | 7 | 0 | 0 | 0 | 7 ✅ | shell — completata |
-| E5 | 0 | 0 | 6 | 0 | 6 | profilo/token — dettagliata |
+| E5 | 6 | 0 | 0 | 0 | 6 ✅ | profilo/token — completata |
 | E6 | 0 | 0 | 6 | 0 | 6 | parsing Excel — dettagliata |
 | E7 | 0 | 0 | TBD | 0 | TBD | adapter Odoo + seed config — storie just-in-time |
 | E8a | 0 | 0 | TBD | 0 | TBD | wizard employee — storie just-in-time |
@@ -81,20 +81,17 @@ Storia → documentazione permanente:
 - STORY-029: `e2e/tests/shell.spec.ts` (navigazione shell e flusso login/logout)
 - STORY-030: `docs/guides/navigazione-e-interfaccia.md`
 
-## E5 — Profilo & token utente
+## E5 — Completata
 
-Gestione sicura delle credenziali dei connettori per-utente (identificativo in chiaro + segreto cifrato write-only). Decisioni in [`ADR-005`](../adr/ADR-005-connector-credentials-security.md). Prerequisito dell'import (E8a); dipende da E3 (identità utente) ed E4 (shell UI).
+Tutte le 6 storie di E5 sono Done e rimosse dal backlog.
 
-Dettaglio storie: [`e5-stories.md`](e5-stories.md) — ID `STORY-E5-N` provvisori, da rinumerare in sequenza globale all'inserimento in sprint.
-
-| Storia | Titolo | Tipo | Dipende da | Stato |
-|---|---|---|---|---|
-| STORY-E5-1 | Modulo cifratura segreti (`encrypt_secret`/`decrypt_secret`) | Backend | — | ⬜ Todo |
-| STORY-E5-2 | Modello `UserToken` + migrazione Alembic | Backend | STORY-E5-1, STORY-012 | ⬜ Todo |
-| STORY-E5-3 | API connettori write-only (GET/PUT/DELETE) | Backend | STORY-E5-2 | ⬜ Todo |
-| STORY-E5-4 | UI profilo connettori | Frontend | STORY-E5-3 | ⬜ Todo |
-| STORY-E5-5 | Stato "token da aggiornare" su errore auth | Backend + Frontend | STORY-E5-3 | ⬜ Todo |
-| STORY-E5-6 | Documentazione E5 | Docs | STORY-E5-1…5 | ⬜ Todo |
+Storia → documentazione permanente:
+- STORY-E5-1: `backend/app/core/security.py` (`encrypt_secret`/`decrypt_secret`), `backend/tests/unit/test_security.py`
+- STORY-E5-2: `backend/app/models/user_token.py`, `backend/alembic/versions/0003_create_user_tokens.py`
+- STORY-E5-3: `backend/app/routers/connectors.py` (`GET|PUT|DELETE /api/me/connectors`), `backend/tests/integration/test_connectors.py`
+- STORY-E5-4: `frontend/src/pages/ProfilePage.tsx`, `frontend/src/hooks/useConnectors.ts`, `frontend/src/components/connectors/`
+- STORY-E5-5: `backend/alembic/versions/0004_add_needs_reauth_to_user_tokens.py`, `needs_reauth` su modello e router, badge "Da aggiornare" in `ConnectorRow.tsx`
+- STORY-E5-6: `docs/adr/ADR-001-timesheet-hub.md` §H aggiornata, `docs/specs/001-functional-spec.md` §connettori aggiornata, `docs/guides/configurare-i-connettori.md`
 
 ## E6 — Parsing Excel & Normalizer
 
@@ -112,7 +109,7 @@ Dettaglio storie: [`e6-stories.md`](e6-stories.md).
 | STORY-E6-6 | Documentazione E6 | Docs | STORY-E6-1…5 | ⬜ Todo |
 
 ## Prossima epica da implementare
-**E5** (profilo & token utente) — E4 completata. Dipende da E3 (✅) ed E4 (✅), nessun blocco.
+**E6** (parsing Excel & Normalizer) — E5 completata. Dipende da E4 (✅) ed E3 (✅), nessun blocco.
 
 ## Roadmap epiche successive (storie da scrivere just-in-time)
 Le epiche E7, E8a, E9a, E3bis, E10, E8b, E9b non hanno ancora file storie: si dettagliano al momento dell'inserimento in sprint, nell'ordine di rilascio sopra.

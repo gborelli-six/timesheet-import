@@ -448,7 +448,7 @@ In sviluppo locale aggiungere:
 |---|---|
 | `GOOGLE_REDIRECT_URI` | `http://localhost:5173/auth/callback` (pagina FE servita da Vite) |
 
-Gestione: variabili cifrate su Railway oppure Infisical (vedi ADR-001-H). Mai nel repository.
+Gestione: variabili cifrate su Railway oppure Infisical (vedi ADR-001-H). Mai nel repository. Per i dettagli di utilizzo di `TOKEN_ENCRYPT_KEY` (algoritmo AES-256-GCM, nonce, AAD, rotazione) vedi ADR-005-B e ADR-005-D.
 
 ---
 
