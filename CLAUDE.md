@@ -206,9 +206,9 @@ Ordine di rilascio **employee-first** (roadmap v0.5): 🏁 Employee MVP → 🏁
 | E3 | ✅ Done | 7 | Google OAuth, JWT, cookie httpOnly, tabella `users` (ruolo `employee` di default) | E2 |
 | E4 | ⬜ Todo | 7 | Design token MUI v7, Mantis shell (Header, SideNav, routing per-ruolo) | — |
 | E5 | ⬜ Todo | 6 | Profilo & token utente, AES-256-GCM, tabella `user_tokens`, API write-only | E3, E4 |
-| E6 | ⬜ Todo | 6 | Upload Excel, SheetJS parsing, `TimesheetEntry[]`, Normalizer | E4 |
-| E7 | ⬜ Todo | TBD | Architettura plug-in adapter + adapter Odoo (JSON-RPC) + **seed config Odoo di default** | E5 |
-| E8a | ⬜ Todo | TBD | Wizard importazione **Employee** (self-import, step 1–4, no Step 0) | E5, E6, E7 |
+| E6 | ⬜ Todo | 6 | Upload Excel, SheetJS parsing, `TimesheetEntry[]` (con `connectorAssignments`), Normalizer | E4 |
+| E7 | ⬜ Todo | TBD | Architettura plug-in adapter + adapter Odoo (JSON-RPC, `getProjects`/`getTasks`) + **seed config Odoo di default** | E5 |
+| E8a | ⬜ Todo | 6+ | Wizard importazione **Employee** (self-import, step 1–4, no Step 0) + **assegnazione multi-connettore per riga** con suggerimenti (`connector_row_mappings`) | E5, E6, E7 |
 | E9a | ⬜ Todo | TBD | Log importazioni **Employee** (solo propri log + dettaglio) | E8a |
 | — | 🏁 | — | **Milestone: Employee MVP** | — |
 | E3bis | ⬜ Todo | TBD | Gestione ruoli (API assegnazione/promozione employee/hr/admin) | E3 |
@@ -218,6 +218,7 @@ Ordine di rilascio **employee-first** (roadmap v0.5): 🏁 Employee MVP → 🏁
 | E9b | ⬜ Todo | TBD | Log importazioni — incremento **HR** (vede tutti i log + filtri avanzati) | E9a, E3bis |
 | — | 🏁 | — | **Milestone: HR** | — |
 | E11 | ⬜ Todo | TBD | Adapter aggiuntivi (Jira, Linear, Asana — post-v1) | E7 |
+| E12 | ⬜ Todo | TBD | Pannello per-utente mappature riga↔connettore preimpostate (post-v1) | E8a |
 
 **Prossima epica da implementare:** E4 (nessun blocco, può partire subito)
 
@@ -238,6 +239,7 @@ Ordine di rilascio **employee-first** (roadmap v0.5): 🏁 Employee MVP → 🏁
 | UX brief | `docs/specs/003-timesheet-hub-ux-brief.md` | Wireframe, layout, navigazione per ruolo |
 | Piano E2E | `docs/specs/004-e2e-test-plan.md` | ~23 scenari P0-P3, convenzioni dati |
 | Spec RBAC | `docs/specs/005-tech-spec-rbac.md` | Permessi per ruolo, enforcement pattern |
+| Spec multi-connettore | `docs/specs/007-multi-connector-row-mapping.md` | Assegnazione multi-connettore per riga, autocomplete progetto/task, suggerimenti da storico, `connector_row_mappings` |
 | Backlog | `docs/backlog/README.md` | Stato attuale storie, link ai file per epica |
 | Agenti | `.claude/agents/` | Definizioni complete dei 10 agenti Conductor |
 | Design | `https://claude.ai/design/p/e1aac35b-a506-46e1-83e0-dbf593de6b87` | Progetto "Timesheet hub" su claude.ai/design — Design System, App Shell, Login screen |

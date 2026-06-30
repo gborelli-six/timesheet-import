@@ -85,8 +85,11 @@ Si utilizza **PostgreSQL** tramite il plugin Railway managed. La scelta di SQLit
 interface TimesheetAdapter:
     submit(entries: TimesheetEntry[], config: AdapterConfig) → ImportResult
     validate(entries: TimesheetEntry[]) → ValidationResult
-    getProjects() → Project[]
+    getProjects(query?: string) → Project[]                  # filtro opzionale per autocomplete
+    getTasks(projectId: string, query?: string) → Task[]     # autocomplete task del progetto
 ```
+
+`getProjects`/`getTasks` alimentano l'**autocomplete live** della selezione progetto/task per riga in fase di importazione (assegnazione multi-connettore — vedi [`007-multi-connector-row-mapping.md`](../specs/007-multi-connector-row-mapping.md)).
 
 **Motivazione:** isola completamente il codice specifico di ciascun backend. Aggiungere un nuovo sistema significa aggiungere un file che implementa l'interfaccia, senza toccare il resto del sistema. Il pannello di controllo (accessibile agli admin) configura quale adapter è attivo per quale progetto e memorizza le credenziali cifrate per ciascuno.
 

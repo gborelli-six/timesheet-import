@@ -29,11 +29,13 @@ Timesheet Hub è uno strumento interno per centralizzare l'importazione mensile 
 1. Il dipendente accede all'applicazione tramite il proprio account Google aziendale (`@sixfeetup.it`).
 2. Carica il proprio file Excel seguendo il template aziendale standard.
 3. L'applicazione mostra un'anteprima dei dati parsati: dipendente, periodo, righe per progetto e task con le ore.
-4. Il dipendente verifica la correttezza dei dati e seleziona su quali backend importare (es. solo Jira, o Jira + Odoo).
+4. Per **ciascuna riga** il dipendente assegna uno o più connettori (inserimento simultaneo su più sistemi, es. Odoo + Jira) e, per ogni connettore scelto, seleziona il **progetto** e il **task** del sistema remoto tramite **autocomplete**. Dalla **seconda importazione** in poi queste associazioni sono **pre-suggerite** in base alle importazioni precedenti e restano sempre modificabili.
 5. Conferma l'importazione.
-6. L'applicazione invia i dati ai backend selezionati tramite i rispettivi adapter.
+6. L'applicazione invia ogni riga ai connettori assegnati tramite i rispettivi adapter, e memorizza le associazioni per i suggerimenti futuri.
 7. Viene mostrato il risultato per ciascun backend: successo, errori parziali o fallimento.
 8. Il log dell'importazione viene salvato e consultabile in seguito.
+
+> Dettaglio del modello dati, dell'algoritmo di suggerimento e dei contratti API in [`007-multi-connector-row-mapping.md`](007-multi-connector-row-mapping.md).
 
 ---
 
@@ -55,7 +57,65 @@ Il file Excel è un template **standard aziendale**, uguale per tutti i dipenden
 - Periodo di riferimento (mese/anno)
 - Righe con: progetto, task, ore giornaliere o totali per il periodo
 
-Il mapping tra le colonne del file Excel e i campi interni è **configurabile** dal pannello HR, per adattarsi a eventuali variazioni future del template senza modificare il codice.
+Il mapping tra le colonne del file Excel e i campi interni è **configurabile** dal pannello Admin, per adattarsi a eventuali variazioni future del template senza modificare il codice.
+
+### Vincoli e comportamento del parser (v1)
+
+| Parametro | Valore |
+|---|---|
+| Estensioni accettate | `.xlsx`, `.xls` |
+| Dimensione massima | 5 MB |
+| Foglio letto | Sempre il **primo foglio** del file, indipendentemente dal nome |
+| Righe vuote | Saltate silenziosamente (non generano warning) |
+| Limite righe | Nessuno (unico limite è la dimensione del file) |
+| Formati data accettati | ISO `YYYY-MM-DD` e italiano `DD/MM/YYYY`; altri formati → warning `INVALID_DATE` |
+
+In v2 il formato data sarà selezionabile dall'Admin nel wizard di configurazione.
+
+---
+
+## Parsing Excel
+
+Il parsing avviene **interamente nel browser** tramite SheetJS (nessun upload al server durante il parsing). Il risultato è un array `TimesheetEntry[]` passato al wizard di importazione.
+
+### Struttura `TimesheetEntry`
+
+| Campo | Tipo | Note |
+|---|---|---|
+| `date` | `string` (opzionale) | ISO `YYYY-MM-DD`; assente se la colonna non è compilata |
+| `project` | `string` | Progetto come scritto nell'Excel |
+| `task` | `string` | Task come scritto nell'Excel |
+| `hours` | `number` | Ore; `0` se il valore è assente o non numerico (warning) |
+| `notes` | `string` (opzionale) | Note libere |
+| `connectorAssignments` | `ConnectorAssignment[]` | Sempre vuoto dopo il parsing; popolato nel wizard (E8a) |
+
+### Mapping colonne default
+
+| Campo interno | Intestazione Excel default |
+|---|---|
+| `date` | `Data` |
+| `project` | `Progetto` |
+| `task` | `Task` |
+| `hours` | `Ore` |
+| `notes` | `Note` |
+
+Il mapping è configurabile dall'Admin (previsto in E10). Per v1 si usa il mapping default.
+
+### Tipi di warning
+
+| `WarningType` | Condizione | Ambito |
+|---|---|---|
+| `MISSING_HOURS` | Valore `Ore` assente o non numerico | Per riga |
+| `MISSING_PROJECT` | Valore `Progetto` assente o vuoto | Per riga |
+| `MISSING_TASK` | Valore `Task` assente o vuoto | Per riga |
+| `INVALID_DATE` | Formato data non riconosciuto (né ISO né italiano) | Per riga |
+| `MISSING_PERIOD` | Colonna `Ore` assente dall'intero file | Globale |
+
+### Warning non bloccanti
+
+I warning **non impediscono** di procedere all'importazione. Il pulsante "Avanti" è sempre abilitato, anche in presenza di righe anomale. L'utente vede il riepilogo "X righe valide · Y righe con warning" e decide se ricaricare il file o procedere.
+
+Vedi spec tecnica dettagliata in [`006-excel-parsing.md`](006-excel-parsing.md).
 
 ---
 
@@ -70,7 +130,7 @@ L'applicazione supporta l'importazione su più sistemi, configurabili indipenden
 | **Linear** | Cliente | Time tracking tramite GraphQL API |
 | **Asana** | Cliente | Time entries tramite REST API |
 
-Ogni backend è **opzionale e indipendente**: un'importazione può coinvolgere uno o più backend contemporaneamente. L'aggiunta di nuovi backend non richiede modifiche ai componenti esistenti.
+Ogni backend è **opzionale e indipendente**: l'assegnazione avviene a livello di **singola riga** del timesheet — la stessa riga può essere inviata a più connettori contemporaneamente, ciascuno con il proprio progetto e task remoto. L'aggiunta di nuovi backend non richiede modifiche ai componenti esistenti.
 
 ---
 
@@ -98,6 +158,10 @@ Ciascun dipendente configura nel proprio profilo le credenziali dei connettori p
 Il segreto è cifrato con AES-256-GCM prima della scrittura in DB; più connettori dello stesso servizio (es. due istanze Jira diverse) sono supportati con label distinte.
 
 Se un segreto risulta scaduto o non valido al momento dell'importazione, il connettore viene marcato "da aggiornare" e il dipendente viene notificato di sostituire la credenziale.
+
+### Memoria delle associazioni riga ↔ connettore
+
+Per evitare la ri-mappatura manuale a ogni importazione, il sistema memorizza per ciascun utente le associazioni tra la coppia (progetto, task) del file Excel e il connettore + progetto + task remoto scelti. Dalla seconda importazione queste associazioni vengono **suggerite automaticamente** e restano modificabili. In una **fase successiva** (epica post-MVP) un pannello per-utente permetterà di visualizzare e modificare direttamente le mappature preimpostate. Dettaglio in [`007-multi-connector-row-mapping.md`](007-multi-connector-row-mapping.md).
 
 ---
 

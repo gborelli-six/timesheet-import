@@ -55,6 +55,10 @@ export async function generateE2EFixtures(): Promise<void> {
 
   await writeWrongFormatFixture("wrong.xlsx");
 
+  // E6-5: fixture per i test di parsing lato client
+  await writeWrongColumnFixture("wrong-format.xlsx");
+  await writeAnomalieFixture("anomalie.xlsx");
+
   console.log("[fixtures/generate] Fixture Excel generate in", XLSX_DIR);
 }
 
@@ -78,5 +82,26 @@ async function writeWrongFormatFixture(filename: string): Promise<void> {
   // Header non conforme — colonne diverse dall'atteso
   ws.addRow(["Giorno", "Attività", "Durata"]);
   ws.addRow(["lunedì", "sviluppo", "8h"]);
+  await wb.xlsx.writeFile(path.join(XLSX_DIR, filename));
+}
+
+// E6-5: header completamente diverso (assenti Progetto e Ore) → MISSING_PERIOD
+async function writeWrongColumnFixture(filename: string): Promise<void> {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Sheet1");
+  ws.addRow(["Cognome", "Nome", "Anno"]);
+  ws.addRow(["Rossi", "Mario", "2026"]);
+  ws.addRow(["Bianchi", "Anna", "2026"]);
+  await wb.xlsx.writeFile(path.join(XLSX_DIR, filename));
+}
+
+// E6-5: header standard con 3 righe: 1 valida, 1 senza Progetto e Ore, 1 senza Task
+async function writeAnomalieFixture(filename: string): Promise<void> {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Timesheet");
+  ws.addRow(["Data", "Progetto", "Task", "Ore", "Note"]);
+  ws.addRow(["2026-01-15", "E2E__OK", "dev", 8, ""]);   // valida
+  ws.addRow(["2026-01-16", "", "review", "", ""]);       // MISSING_PROJECT + MISSING_HOURS
+  ws.addRow(["2026-01-17", "E2E__OK", "", 4, ""]);       // MISSING_TASK
   await wb.xlsx.writeFile(path.join(XLSX_DIR, filename));
 }
