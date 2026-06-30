@@ -2,9 +2,9 @@
 
 | Campo | Valore |
 |---|---|
-| Versione | 0.1 |
-| Data | 2026-05-28 |
-| Stato | Bozza |
+| Versione | 0.2 |
+| Data | 2026-06-30 |
+| Stato | Approvata (Step 1 & Step 2 — STORY-E6-1) |
 | Destinatari | Team UX/UI / Claude Design |
 | Riferimenti | FUNCTIONAL-SPEC.md · ADR-001 |
 
@@ -72,17 +72,103 @@ Flusso principale e più complesso. Articolato in **4 step sequenziali** con bar
 - Effetto: i dati del dipendente selezionato vengono usati per il log e per le credenziali
 
 #### Step 1 — Upload file Excel
-- Drag & drop + bottone "Sfoglia"
-- Feedback immediato: nome file, dimensione, icona di validazione formato
-- Errore visivo se il file non è un Excel o non rispetta il template
+
+Per il ruolo **employee** il wizard ha **3 step**: Upload → Verifica e assegna → Conferma. Lo Step 0 (selezione dipendente) è visibile solo a HR/admin.
+
+Panel dello step:
+- eyebrow (font-mono, uppercase): "Step 1"
+- titolo: "Carica il file Excel"
+- descrizione: "Trascina o seleziona il timesheet del periodo. Il file viene letto in locale: nessun upload sul server in questa fase."
+
+**Componente FileUpload — 4 stati visivi:**
+
+| Stato | Trigger | Struttura visiva |
+|---|---|---|
+| **idle** | Stato iniziale / dopo "Rimuovi" | Box `dropzone` con bordo tratteggiato: icona upload centrata, titolo "Trascina qui il file Excel del timesheet", sub "oppure", bottone `outlined sm` "Sfoglia file", hint mono piccolo ".xlsx o .xls · max 5 MB · viene letto il primo foglio" |
+| **loading** | File selezionato/droppato — parsing SheetJS in corso | Box `dropzone is-loading`: bordo solid `--primary-200`, sfondo `--primary-50`; spinner centrato; testo "Lettura del file…"; sub "Parsing del primo foglio con SheetJS" |
+| **error** | File non valido (formato / dimensione / vuoto) | Box `dropzone is-error`: bordo `--error-border`, sfondo `--error-bg`, icona upload in `--error-600`; **sotto il box** (separato): div `fu-error` con icona warning + testo messaggio. Il box rimane cliccabile per riprovare. |
+| **success** | Parsing completato senza errori | Il box dropzone scompare; appare una card `file-chip`: icona `fileChk` (file + checkmark), nome file in grassetto, meta `"X MB · N righe · 1° foglio"`, badge verde "Formato valido", bottone ghost "Rimuovi" con icona cestino |
+
+Messaggi di errore esatti:
+- Formato: `"Formato non supportato. Carica un file Excel (.xlsx o .xls)"`
+- Dimensione: `"File troppo grande (max 5 MB)"`
+- File vuoto: `"Il file non contiene dati"`
+
+**Template hint card** (sotto il FileUpload, sempre visibile in step 1):
+- Card `tmpl-card` con header "Template aziendale standard" + icona info
+- Pillole colonne in font-mono: `Data` · `Progetto` · `Task` · `Ore` · `Note`
+
+**Footer step 1:**
+- Sinistra: hint "Il file resta in locale fino alla conferma." (icona info)
+- Destra: bottone `btn-primary` "Avanti →" — abilitato solo dopo parsing riuscito
+
+---
 
 #### Step 2 — Preview e verifica dati
-- Tabella dei dati parsati: **dipendente**, **periodo** (mese/anno), righe con **progetto · task · ore**
-- Lettura da SheetJS lato client (nessun upload al server in questa fase)
-- Warning visivi su righe anomale (ore mancanti, progetto non riconosciuto)
-- Il dipendente può annullare e ricaricare un file diverso
 
-#### Step 3 — Selezione backend
+Panel header:
+- eyebrow: "Step 2"
+- titolo: "Verifica e assegna"
+- descrizione: "Controlla i dati parsati e assegna ogni riga ai connettori, con progetto e task remoto. Le righe con warning restano importabili; quelle senza connettori non verranno importate."
+- **summary-badges** (lato destro del panel-head): badge verde "X valide" · badge amber "Y con warning" · badge blu "X/N righe pronte"; legenda "⬡ = suggerito" visibile dalla seconda importazione
+
+**Alert inline** (sopra la tabella, solo se ci sono righe con warning):
+- Stile `alert alert-warning` con icona warning
+- Titolo: `"X righe valide · Y con warning"`
+- Body: `"I warning (ore, progetto, task o data mancanti) non bloccano l'importazione: assegna comunque i connettori oppure ricarica un file corretto."`
+
+**Alert storico** (sopra la tabella, solo dalla seconda importazione):
+- Stile `alert alert-info` con icona sparkle ✦
+- Titolo: "Assegnazioni pre-compilate"
+- Body: "Dalla seconda importazione le associazioni sono suggerite in base allo storico. Sono sempre modificabili: apri una riga per cambiarle."
+
+**Tabella preview** (`table preview-table`) con scroll verticale:
+
+| Colonna | Larghezza | Dettaglio |
+|---|---|---|
+| Data | 70 px | Font-mono, text-xs, colore muted, nowrap; `fmtDate` normalizza ISO e DD/MM/YYYY |
+| Progetto | auto | Se vuoto: testo muted corsivo "— mancante" |
+| Task | auto | Se vuoto: testo muted corsivo "— mancante" |
+| Ore | 70 px | Allineamento destro (classe `num`); "—" se null |
+| Stato | 132 px | Badge OK o warning (vedi sotto) |
+| Connettori assegnati | 200 px (230 px interattiva) | Placeholder in E6; chip in E8a |
+
+> **La colonna "Note" non è presente** in tabella: le note dell'Excel sono gestite internamente ma non mostrate nella preview.
+
+**Righe con warning**: classe `row-warning` sulla `<tr>` (sfondo `--warning-bg` dal CSS).
+
+**Colonna Stato:**
+- Riga senza warning: `badge badge-success` con dot + "OK"
+- Riga con warning: `badge badge-warning warn-badge` con icona warning + etichetta breve (se 1 warning: testo del tipo; se N: `"N warning"`); attributo `title` con lista completa dei warning (tooltip browser nativo)
+
+**Colonna "Connettori assegnati" — predisposizione E6 / interazione E8a:**
+- In E6 (non interattiva): testo corsivo muted `"— da assegnare"`
+- In E8a (interattiva): bottone `"＋ Assegna"` (bordo tratteggiato, colore primary) se riga senza assegnazioni; chip connettore + bottone edit se già assegnata
+- **Chip connettore**: monogramma colorato (lettera servizio) + ID task in mono; chip `is-suggested` con bordo `dashed --accent-400`, sfondo `--accent-50`, icona sparkle ✦
+
+**Footer step 2:**
+- Sinistra: bottone ghost "← Indietro" → torna allo step 1 (FileUpload torna a idle)
+- Destra: hint "Assegna almeno una riga per procedere." (solo se nessun connettore assegnato) + bottone `btn-primary` "Avanti →" (disabilitato se nessuna riga ha connettori assegnati — logica implementata in E8a)
+
+---
+
+#### Tipi di warning — lista definitiva
+
+I warning sono prodotti dal Normalizer (`computeWarnings`, E6-2) e visualizzati in tabella allo Step 2.
+
+| `WarningType` | Scope | Trigger | Etichetta display |
+|---|---|---|---|
+| `MISSING_HOURS` | Per-riga | `hours == null` o non numerico | "Ore mancanti" |
+| `MISSING_PROJECT` | Per-riga | `project` vuoto o solo spazi | "Progetto mancante" |
+| `MISSING_TASK` | Per-riga | `task` vuoto o solo spazi | "Task mancante" |
+| `INVALID_DATE` | Per-riga | Data presente ma non in formato `YYYY-MM-DD` né `DD/MM/YYYY` | "Data non valida" |
+| `MISSING_PERIOD` | Globale | Colonna Ore assente nell'header del file (una sola volta) | "Periodo non determinato" |
+
+`MISSING_PERIOD` è globale (non per-riga): emesso una sola volta se la colonna mappata a `hours` non esiste nell'header del file Excel.
+
+---
+
+#### Step 3 — Assegnazione connettori per riga
 - Lista dei backend disponibili per i progetti presenti nel file: Jira, Odoo, Linear, Asana
 - Ogni backend mostra: logo, nome, stato token (✓ configurato / ⚠ token mancante o scaduto)
 - Checkbox multipla: l'utente sceglie su quali importare

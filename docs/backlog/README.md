@@ -1,6 +1,6 @@
 # Backlog Timesheet Hub
 
-> Aggiornato: 2026-06-29 — E1/E2/E3/E4/E5 completate; E6 dettagliata. **Riprioritizzazione employee-first** (roadmap v0.5): rilascio in ordine 🏁 Employee MVP → 🏁 Admin → 🏁 HR. Wizard e log spezzati in E8a/E9a (employee) ed E8b/E9b (HR); nuova epica E3bis (gestione ruoli); seed config Odoo in E7.
+> Aggiornato: 2026-06-30 — E1/E2/E3/E4/E5 completate; E6 dettagliata. **Riprioritizzazione employee-first** (roadmap v0.5): rilascio in ordine 🏁 Employee MVP → 🏁 Admin → 🏁 HR. Wizard e log spezzati in E8a/E9a (employee) ed E8b/E9b (HR); nuova epica E3bis (gestione ruoli); seed config Odoo in E7. **Nuovo requisito**: assegnazione **multi-connettore per riga** + suggerimenti da storico (spec [`007`](../specs/007-multi-connector-row-mapping.md)) — predisposto in E6 (modello dati), dettagliato in E8a; pannello per-utente delle mappature → nuova epica post-MVP **E12**.
 
 Il backlog è effimero: le storie completate vengono rimosse dopo il merge su `main` e l'aggiornamento della documentazione permanente (ADR, spec, guide). I dati persistenti vivono in ADR/spec/test/codice, non qui.
 
@@ -17,15 +17,16 @@ Ordine di rilascio **employee-first** (vedi `docs/timesheet-hub-roadmap.md` v0.5
 | E3 | 7 | 0 | 0 | 0 | 7 ✅ | |
 | E4 | 7 | 0 | 0 | 0 | 7 ✅ | shell — completata |
 | E5 | 6 | 0 | 0 | 0 | 6 ✅ | profilo/token — completata |
-| E6 | 0 | 0 | 6 | 0 | 6 | parsing Excel — dettagliata |
+| E6 | 6 | 0 | 0 | 0 | 6 ✅ | parsing Excel — completata |
 | E7 | 0 | 0 | TBD | 0 | TBD | adapter Odoo + seed config — storie just-in-time |
-| E8a | 0 | 0 | TBD | 0 | TBD | wizard employee — storie just-in-time |
+| E8a | 0 | 0 | 6+ | 0 | TBD | wizard employee — assegnazione multi-connettore dettagliata (`e8a-stories.md`); resto just-in-time |
 | E9a | 0 | 0 | TBD | 0 | TBD | log employee — storie just-in-time |
 | E3bis | 0 | 0 | TBD | 0 | TBD | gestione ruoli — storie just-in-time |
 | E10 | 0 | 0 | TBD | 0 | TBD | pannello Admin — storie just-in-time |
 | E8b | 0 | 0 | TBD | 0 | TBD | wizard HR — storie just-in-time |
 | E9b | 0 | 0 | TBD | 0 | TBD | log HR — storie just-in-time |
 | E11 | 0 | 0 | TBD | 0 | TBD | adapter aggiuntivi — post-v1 |
+| E12 | 0 | 0 | TBD | 0 | TBD | pannello per-utente mappature riga↔connettore — post-v1 |
 
 ## E1 — Completata
 
@@ -93,32 +94,29 @@ Storia → documentazione permanente:
 - STORY-E5-5: `backend/alembic/versions/0004_add_needs_reauth_to_user_tokens.py`, `needs_reauth` su modello e router, badge "Da aggiornare" in `ConnectorRow.tsx`
 - STORY-E5-6: `docs/adr/ADR-001-timesheet-hub.md` §H aggiornata, `docs/specs/001-functional-spec.md` §connettori aggiornata, `docs/guides/configurare-i-connettori.md`
 
-## E6 — Parsing Excel & Normalizer
+## E6 — Completata
 
-Parsing client-side SheetJS, normalizzazione in `TimesheetEntry[]` con `ColumnMapping` configurabile (default hardcoded per v1; pannello di config in E10), preview con warning non bloccanti per righe anomale. Tutta la logica è frontend — nessuna tabella DB, nessun upload al server durante il parsing. Sblocca E8a (wizard orchestrazione end-to-end); dipende da E4 (componenti MUI) ed E3 (identità utente per i test E2E).
+Tutte le 6 storie di E6 sono Done e rimosse dal backlog.
 
-Dettaglio storie: [`e6-stories.md`](e6-stories.md).
-
-| Storia | Titolo | Tipo | Dipende da | Stato |
-|---|---|---|---|---|
-| STORY-E6-1 | Design UX: step Upload & step Preview | UX/UI | E4 (STORY-030) | ⬜ Todo |
-| STORY-E6-2 | Tipo `TimesheetEntry` e Normalizer | Frontend | STORY-E6-1 | ⬜ Todo |
-| STORY-E6-3 | Componente `FileUpload` + parsing SheetJS | Frontend | STORY-E6-1 | ⬜ Todo |
-| STORY-E6-4 | Componente `PreviewTable` con warning righe anomale | Frontend | STORY-E6-2, STORY-E6-3 | ⬜ Todo |
-| STORY-E6-5 | Fixture Excel E2E + scenari E2E #6/#7/#8 | E2E | STORY-E6-3, STORY-E6-4 | ⬜ Todo |
-| STORY-E6-6 | Documentazione E6 | Docs | STORY-E6-1…5 | ⬜ Todo |
+Storia → documentazione permanente:
+- STORY-E6-1: `docs/specs/003-timesheet-hub-ux-brief.md` §Step 1 e §Step 2 aggiornati (stati visivi FileUpload, layout PreviewTable, lista WarningType)
+- STORY-E6-2: `frontend/src/lib/timesheet/types.ts` (`TimesheetEntry`, `ConnectorAssignment`, `ColumnMapping`, `DEFAULT_COLUMN_MAPPING`, `RowWarning`, `WarningType`), `frontend/src/lib/timesheet/normalizer.test.ts`
+- STORY-E6-3: `frontend/src/components/FileUpload/FileUpload.tsx`, parsing SheetJS + validazione formato/dimensione
+- STORY-E6-4: `frontend/src/components/PreviewTable/PreviewTable.tsx`, evidenziazione righe anomale, badge riepilogativo, colonna connettori placeholder
+- STORY-E6-5: `e2e/fixtures/` (wrong-format.xlsx, anomalie.xlsx), `e2e/tests/excel-upload.spec.ts` (scenari #6/#7/#8)
+- STORY-E6-6: `docs/specs/006-excel-parsing.md`, `docs/guides/excel-upload.md`, `docs/specs/001-functional-spec.md` §Parsing Excel aggiornata
 
 ## Prossima epica da implementare
-**E6** (parsing Excel & Normalizer) — E5 completata. Dipende da E4 (✅) ed E3 (✅), nessun blocco.
+**E7** (adapter Odoo + seed config) — E6 completata. Dipende da E5 (✅), nessun blocco.
 
 ## Roadmap epiche successive (storie da scrivere just-in-time)
-Le epiche E7, E8a, E9a, E3bis, E10, E8b, E9b non hanno ancora file storie: si dettagliano al momento dell'inserimento in sprint, nell'ordine di rilascio sopra.
+Le epiche E7, E9a, E3bis, E10, E8b, E9b non hanno ancora file storie: si dettagliano al momento dell'inserimento in sprint, nell'ordine di rilascio sopra. **E8a** ha già le storie della feature multi-connettore in [`e8a-stories.md`](e8a-stories.md); le restanti storie del wizard si dettagliano just-in-time.
 
 - **Numerazione storie**: gli `STORY-NNN` sono globali e progressivi. E4 termina a **STORY-030**; E5/E6 hanno ID provvisori (`STORY-E5-N`/`STORY-E6-N`) da fissare in sequenza al commit in sprint. Le epiche successive riprendono da lì.
-- **Fase Employee** (🏁 MVP): E7 (adapter Odoo + seed config Odoo) · E8a (wizard self-import) · E9a (log propri).
+- **Fase Employee** (🏁 MVP): E7 (adapter Odoo + seed config Odoo, espone progetti/task per autocomplete) · E8a (wizard self-import + assegnazione multi-connettore per riga con suggerimenti) · E9a (log propri).
 - **Fase Admin** (🏁): E3bis (gestione ruoli, backend identità) · E10 (pannello Admin UI: utenti/ruoli, CRUD backend, mapping Excel).
 - **Fase HR** (🏁): E8b (Step 0 selezione dipendente + `POST /imports?for=`) · E9b (vista di tutti i log + filtri avanzati).
-- **Post-v1**: E11 (adapter Jira/Linear/Asana).
+- **Post-v1**: E11 (adapter Jira/Linear/Asana) · E12 (pannello per-utente per modificare le mappature riga↔connettore preimpostate).
 
 ## Note sullo scope E1
 - L'E2E "verde" in E1 è uno **smoke infrastrutturale** (build & boot). Lo scenario #1 Auth/Smoke (P0) richiede JWT reali — dipende da E3.
