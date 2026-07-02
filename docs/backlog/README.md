@@ -1,6 +1,6 @@
 # Backlog Timesheet Hub
 
-> Aggiornato: 2026-07-02 — E1/E2/E3/E4/E5/E6/E7/E8a completate; E9a **ri-dettagliata**: 8 storie Todo in [`e9a-stories.md`](e9a-stories.md). **Riconciliazione**: E8a è stata chiusa senza persistere i log (`POST /imports` effimero, nessuna tabella `imports`); E9a **assorbe la persistenza** (possiede `imports`/`import_rows` + migrazione + scrittura alla submit) e non è più solo-lettura. **Riprioritizzazione employee-first** (roadmap v0.5): rilascio in ordine 🏁 Employee MVP → 🏁 Admin → 🏁 HR. Wizard e log spezzati in E8a/E9a (employee) ed E8b/E9b (HR); nuova epica E3bis (gestione ruoli). **Nuovo requisito**: assegnazione **multi-connettore per riga** + suggerimenti da storico (spec [`007`](../specs/007-multi-connector-row-mapping.md)) — predisposto in E6 (modello dati), dettagliato in E8a; pannello per-utente delle mappature → nuova epica post-MVP **E12**.
+> Aggiornato: 2026-07-02 — E1/E2/E3/E4/E5/E6/E7/E8a/E9a completate. 🏁 **Milestone Employee MVP raggiunta**. Prossima epica: E3bis (gestione ruoli). **Riconciliazione**: E8a è stata chiusa senza persistere i log (`POST /imports` effimero, nessuna tabella `imports`); E9a **assorbe la persistenza** (possiede `imports`/`import_rows` + migrazione + scrittura alla submit) e non è più solo-lettura. **Riprioritizzazione employee-first** (roadmap v0.5): rilascio in ordine 🏁 Employee MVP → 🏁 Admin → 🏁 HR. Wizard e log spezzati in E8a/E9a (employee) ed E8b/E9b (HR); nuova epica E3bis (gestione ruoli). **Nuovo requisito**: assegnazione **multi-connettore per riga** + suggerimenti da storico (spec [`007`](../specs/007-multi-connector-row-mapping.md)) — predisposto in E6 (modello dati), dettagliato in E8a; pannello per-utente delle mappature → nuova epica post-MVP **E12**.
 
 Il backlog è effimero: le storie completate vengono rimosse dopo il merge su `main` e l'aggiornamento della documentazione permanente (ADR, spec, guide). I dati persistenti vivono in ADR/spec/test/codice, non qui.
 
@@ -20,7 +20,7 @@ Ordine di rilascio **employee-first** (vedi `docs/timesheet-hub-roadmap.md` v0.5
 | E6 | 6 | 0 | 0 | 0 | 6 ✅ | parsing Excel — completata |
 | E7 | 7 | 0 | 0 | 0 | 7 ✅ | architettura plug-in + adapter Odoo — completata |
 | E8a | 6 | 0 | 0 | 0 | 6 ✅ | wizard employee — completata |
-| E9a | 0 | 0 | 8 | 0 | 8 | log employee (persistenza + read) — storie in [`e9a-stories.md`](e9a-stories.md) |
+| E9a | 8 | 0 | 0 | 0 | 8 ✅ | log Employee — completata |
 | E3bis | 0 | 0 | TBD | 0 | TBD | gestione ruoli — storie just-in-time |
 | E10 | 0 | 0 | TBD | 0 | TBD | pannello Admin — storie just-in-time |
 | E8b | 0 | 0 | TBD | 0 | TBD | wizard HR — storie just-in-time |
@@ -133,23 +133,31 @@ Storia → documentazione permanente:
 
 > **Nota di riconciliazione**: E8a è stata chiusa **senza persistere i log di importazione** — `POST /api/me/imports` (`backend/app/routers/imports.py`) esegue il submit sugli adapter e restituisce i risultati solo nella response HTTP (nessuna tabella `imports`/`import_rows`, nessun endpoint `GET`). La roadmap v0.5 assegnava `imports` a E8a; la persistenza mancante è **assorbita da E9a** (vedi sotto).
 
-## E9a — In corso (storie Todo)
+## E9a — Completata
 
-8 storie dettagliate in [`e9a-stories.md`](e9a-stories.md), tutte ⬜ Todo. Dipende da E8a (✅). **Scope aggiornato**: E9a non è più solo-lettura — possiede i modelli `imports`/`import_rows`, la migrazione e la scrittura del log dentro `POST /imports`, oltre a lista, dettaglio, UI ed E2E.
+8 storie: tutte ✅ Done. Dipende da E8a (✅). **Scope**: E9a possiede i modelli `imports`/`import_rows`, la migrazione, la scrittura del log dentro `POST /imports`, gli endpoint di lista e dettaglio, la UI (LogPage + LogDetailPage) e i test E2E.
+
+Backend: `backend/app/models/import_log.py` (`Import`/`ImportRow` + enum), migrazione `0007_create_imports_and_import_rows.py`, scrittura log + `import_id` in `backend/app/routers/imports.py`, endpoint `GET /api/me/imports` e `GET /api/me/imports/{id}`; test unit/integration; tabella permessi RBAC in `docs/specs/005-tech-spec-rbac.md`.
+
+Frontend: tipi log + `ImportSubmitResponse` (`frontend/src/types/index.ts`), hook `useImports`/`useImportDetail`, `LogPage.tsx`, `LogDetailPage.tsx` (`/log/:id`), bottone "Log dettagliato" (`data-testid="result-go-to-log"`) naviga a `/log/{import_id}`; test unit verdi.
+
+E2E: `e2e/tests/import-log.spec.ts` — Scenario #13 (`@smoke`): wizard con partial.xlsx → log consultabile via bottone + via `/log`; Scenario #15: log di hr non compare nella lista employee. Backend E2E: `POST /_test/seed-import-log` + reset esteso a `imports`.
+
+Docs: `docs/guides/log-importazioni.md`, aggiornamenti `001-functional-spec.md`, `003-timesheet-hub-ux-brief.md` §3.4, `timesheet-hub-roadmap.md` (nota riconciliazione E8a/E9a).
 
 | ID | Titolo | Tipo | Stato |
 |---|---|---|---|
-| STORY-E9a-1 | Modelli `imports` + `import_rows` + migrazione Alembic | Backend | ⬜ Todo |
-| STORY-E9a-2 | Persistenza del log alla submit + `import_id` nella response | Backend | ⬜ Todo |
-| STORY-E9a-3 | Endpoint lista + dettaglio log propri (`GET /api/me/imports` + `/{id}`) | Backend | ⬜ Todo |
-| STORY-E9a-4 | Tipi TypeScript + hook dati (TanStack Query) | Frontend | ⬜ Todo |
-| STORY-E9a-5 | LogPage: lista + filtri | Frontend | ⬜ Todo |
-| STORY-E9a-6 | Dettaglio importazione + aggancio bottone "Log dettagliato" | Frontend | ⬜ Todo |
-| STORY-E9a-7 | E2E: log consultabile + RBAC "solo i propri log" | E2E | ⬜ Todo |
-| STORY-E9a-8 | Documentazione (Definition of Done) | Docs | ⬜ Todo |
+| STORY-E9a-1 | Modelli `imports` + `import_rows` + migrazione Alembic | Backend | ✅ Done |
+| STORY-E9a-2 | Persistenza del log alla submit + `import_id` nella response | Backend | ✅ Done |
+| STORY-E9a-3 | Endpoint lista + dettaglio log propri (`GET /api/me/imports` + `/{id}`) | Backend | ✅ Done |
+| STORY-E9a-4 | Tipi TypeScript + hook dati (TanStack Query) | Frontend | ✅ Done |
+| STORY-E9a-5 | LogPage: lista + filtri | Frontend | ✅ Done |
+| STORY-E9a-6 | Dettaglio importazione + aggancio bottone "Log dettagliato" | Frontend | ✅ Done |
+| STORY-E9a-7 | E2E: log consultabile + RBAC "solo i propri log" | E2E | ✅ Done |
+| STORY-E9a-8 | Documentazione (Definition of Done) | Docs | ✅ Done |
 
 ## Prossima epica da implementare
-**E9a** (log importazioni Employee) — E8a completata. Dipende da E8a (✅), nessun blocco. Include la persistenza del log non realizzata in E8a.
+**E3bis** (gestione ruoli) — E9a completata. 🏁 Milestone Employee MVP raggiunta. Nessun blocco.
 
 ## Roadmap epiche successive (storie da scrivere just-in-time)
 Le epiche E3bis, E10, E8b, E9b non hanno ancora file storie: si dettagliano al momento dell'inserimento in sprint, nell'ordine di rilascio sopra.
